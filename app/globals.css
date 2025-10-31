@@ -1,4 +1,5 @@
 @import 'maplibre-gl/dist/maplibre-gl.css';
+@import 'mapbox-gl/dist/mapbox-gl.css';
 
 @tailwind base;
 @tailwind components;
@@ -121,7 +122,7 @@ iframe:not([src*="openstreetmap"]) {
 
 /* Force full coverage and hide specific elements */
 body, html, #__next, main {
-  background-color: #0a0a0a !important;
+  background-color: #000000 !important;
   overflow: hidden !important;
 }
 
@@ -141,4 +142,27 @@ div[style*="bottom: 16px"] {
   pointer-events: none !important;
   display: none !important;
   transform: translateX(-9999px) !important;
+}
+
+/* Remove canvas filter that's making everything black */
+
+/* Additional text hiding */
+.maplibregl-canvas text,
+.maplibregl-canvas tspan,
+[data-text],
+text,
+.maplibregl-map text,
+.maplibregl-map tspan,
+.maplibregl-map svg text,
+canvas + * text,
+svg text,
+svg tspan,
+div[style*="pointer-events: none"] *,
+.maplibregl-canvas-container text,
+.maplibregl-canvas-container tspan {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  font-size: 0 !important;
+  color: transparent !important;
 }
