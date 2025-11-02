@@ -1,5 +1,5 @@
-@import 'maplibre-gl/dist/maplibre-gl.css';
-@import 'mapbox-gl/dist/mapbox-gl.css';
+@import "maplibre-gl/dist/maplibre-gl.css";
+@import "mapbox-gl/dist/mapbox-gl.css";
 
 @tailwind base;
 @tailwind components;
@@ -121,7 +121,10 @@ iframe:not([src*="openstreetmap"]) {
 }
 
 /* Force full coverage and hide specific elements */
-body, html, #__next, main {
+body,
+html,
+#__next,
+main {
   background-color: #000000 !important;
   overflow: hidden !important;
 }
@@ -169,10 +172,8 @@ div[style*="pointer-events: none"] *,
 
 /* Departure Mono font - Use local font files if available in public/fonts/ */
 @font-face {
-  font-family: 'DepartureMono';
-  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2'),
-       url('/fonts/DepartureMono-Regular.woff') format('woff'),
-       url('/fonts/DepartureMono-Regular.ttf') format('truetype');
+  font-family: "DepartureMono";
+  src: url("/fonts/DepartureMono-Regular.woff2") format("woff2"), url("/fonts/DepartureMono-Regular.woff") format("woff"), url("/fonts/DepartureMono-Regular.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -183,16 +184,39 @@ div[style*="pointer-events: none"] *,
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  font-family: 'DepartureMono', 'Courier New', Courier, monospace;
+  font-family: "DepartureMono", "Courier New", Courier, monospace;
   letter-spacing: 0.05em;
 }
 
 /* Apply Departure Mono globally with fallback */
 * {
-  font-family: 'DepartureMono', 'Courier New', Courier, monospace;
+  font-family: "DepartureMono", "Courier New", Courier, monospace;
 }
 
 /* Courier New font for all numbers */
 .font-number {
-  font-family: 'Courier New', Courier, monospace !important;
+  font-family: "Courier New", Courier, monospace !important;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Improve touch targets */
+  button,
+  select {
+    min-height: 44px; /* iOS recommended touch target size */
+    touch-action: manipulation;
+  }
+
+  /* Prevent text selection on UI elements during map interactions */
+  .pixelated {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Ensure map markers are tappable */
+  .bitcoin-node-marker {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
 }

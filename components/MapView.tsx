@@ -62,56 +62,58 @@ function MinerDialog({ minerData, ip, onClose }: MinerDialogProps) {
   const blockHeight = data[4] || 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={onClose}>
-      <div className="bg-black border-2 border-white p-6 rounded max-w-md w-full mx-4 pixelated" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center">
-            <img src="/main_logo.png" alt="Logo" className="w-12 h-12" />
-            <h2 className="text-2xl font-bold text-white">MINER INFO</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" onClick={onClose}>
+      <div className="bg-black border border-white md:border-2 p-4 md:p-6 rounded max-w-md w-full max-h-[90vh] overflow-y-auto pixelated" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-3 md:mb-4">
+          <div className="flex items-center gap-2">
+            <img src="/main_logo.png" alt="Logo" className="w-8 h-8 md:w-12 md:h-12" />
+            <h2 className="text-lg md:text-2xl font-bold text-white">MINER INFO</h2>
           </div>
-          <button onClick={onClose} className="text-white hover:text-gray-400 text-2xl">
+          <button onClick={onClose} className="text-white hover:text-gray-400 text-2xl md:text-3xl flex-shrink-0">
             ×
           </button>
         </div>
 
-        <div className="space-y-3 text-white">
+        <div className="space-y-2 md:space-y-3 text-white text-sm md:text-base">
           <div>
-            <span className="text-[#f7931a] font-bold">IP Address:</span>
-            <div className="mt-1 break-words break-all">{ip}</div>
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">IP Address:</span>
+            <div className="mt-1 break-words break-all text-xs md:text-sm">{ip}</div>
           </div>
 
           <div>
-            <span className="text-[#f7931a] font-bold">Location:</span>
-            <div className="mt-1">
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">Location:</span>
+            <div className="mt-1 text-xs md:text-sm">
               {city}, {country}
             </div>
           </div>
 
           <div>
-            <span className="text-[#f7931a] font-bold">Coordinates:</span>
-            <div className="mt-1">
-              <span className="font-number">{latitude.toFixed(4)}, {longitude.toFixed(4)}</span>
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">Coordinates:</span>
+            <div className="mt-1 text-xs md:text-sm">
+              <span className="font-number">
+                {latitude.toFixed(4)}, {longitude.toFixed(4)}
+              </span>
             </div>
           </div>
 
           <div>
-            <span className="text-[#f7931a] font-bold">Bitcoin Version:</span>
-            <div className="mt-1">{version}</div>
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">Bitcoin Version:</span>
+            <div className="mt-1 text-xs md:text-sm">{version}</div>
           </div>
 
           <div>
-            <span className="text-[#f7931a] font-bold">Protocol:</span>
-            <div className="mt-1">{protocol}</div>
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">Protocol:</span>
+            <div className="mt-1 text-xs md:text-sm">{protocol}</div>
           </div>
 
           <div>
-            <span className="text-[#f7931a] font-bold">ISP:</span>
-            <div className="mt-1">{isp}</div>
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">ISP:</span>
+            <div className="mt-1 text-xs md:text-sm">{isp}</div>
           </div>
 
           <div>
-            <span className="text-[#f7931a] font-bold">Timezone:</span>
-            <div className="mt-1">{timezone}</div>
+            <span className="text-[#f7931a] font-bold text-xs md:text-sm">Timezone:</span>
+            <div className="mt-1 text-xs md:text-sm">{timezone}</div>
           </div>
         </div>
       </div>
@@ -172,7 +174,7 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
   // Load data with delay
   useEffect(() => {
     console.log("Starting data load...");
-    
+
     // Add delay before starting to load
     const loadingDelay = setTimeout(() => {
       fetch("/bitnoderest.json")
@@ -347,13 +349,17 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
         // Create a custom HTML element for the marker
         const el = document.createElement("div");
         el.className = "bitcoin-node-marker";
-        el.style.width = "30px";
-        el.style.height = "30px";
+        // Make markers responsive - slightly smaller on mobile for better tap targets
+        const isMobile = window.innerWidth < 768;
+        const markerSize = isMobile ? "24px" : "30px";
+        el.style.width = markerSize;
+        el.style.height = markerSize;
         el.style.backgroundImage = "url(/sato.gif)";
         el.style.backgroundSize = "contain";
         el.style.backgroundRepeat = "no-repeat";
         el.style.backgroundPosition = "center";
         el.style.cursor = "pointer";
+        el.style.touchAction = "manipulation"; // Improve touch responsiveness
         el.style.transition = "opacity 0.2s, filter 0.2s";
         el.style.willChange = "opacity, filter";
 
@@ -402,9 +408,7 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
       <div className="w-full h-full relative flex items-center justify-center" style={{ backgroundColor: "#0a0a0a" }}>
         <div className="flex flex-col items-center justify-center gap-6 pixelated">
           <img src="/sato.gif" alt="Loading" className="w-32 h-32 md:w-40 md:h-40" />
-          <p className="text-white text-xl md:text-2xl font-bold text-center">
-            Finding your friendly neighborhood Satoshi
-          </p>
+          <p className="text-white text-xl md:text-2xl font-bold text-center">Finding your friendly neighborhood Satoshi</p>
         </div>
       </div>
     );
@@ -415,21 +419,21 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* Title - Top Left */}
-      <div className="absolute top-4 left-4 z-10 pixelated flex items-center">
-        <img src="/main_logo.png" alt="Sato Finder" className="w-16 h-16 md:w-20 md:h-20" />
+      <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 pixelated flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+        <img src="/main_logo.png" alt="Sato Finder" className="w-10 h-10 md:w-20 md:h-20" />
         <div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-1" style={{ color: "#f7931a" }}>
+          <h1 className="text-xl md:text-5xl font-bold mb-0 md:mb-1" style={{ color: "#f7931a" }}>
             SATO FINDER
           </h1>
-          <p className="text-white text-sm md:text-base">Find your friendly neighborhood satoshi</p>
+          <p className="text-white text-xs md:text-base hidden md:block">Find your friendly neighborhood satoshi</p>
         </div>
       </div>
 
       {/* Country Selector - Top Right */}
-      <div className="absolute top-4 right-4 z-10 bg-black bg-opacity-80 border-2 border-white p-3 rounded pixelated">
-        <label className="text-white text-sm font-bold mb-2 block">COUNTRY</label>
+      <div className="absolute top-2 right-2 md:top-4 md:right-4 z-10 bg-black bg-opacity-80 border border-white md:border-2 p-2 md:p-3 rounded pixelated max-w-[calc(100vw-4rem)] md:max-w-none">
+        <label className="text-white text-xs md:text-sm font-bold mb-1 md:mb-2 block">COUNTRY</label>
         <div className="flex items-center gap-2">
-          <select value={selectedCountry} onChange={(e) => setSelectedCountry(e.target.value)} className="bg-black text-white border-2 border-white px-3 py-2 rounded cursor-pointer pixelated flex-1">
+          <select value={selectedCountry} onChange={(e) => setSelectedCountry(e.target.value)} className="bg-black text-white border border-white md:border-2 px-2 py-1 md:px-3 md:py-2 rounded cursor-pointer pixelated flex-1 text-xs md:text-sm">
             <option value="">ALL COUNTRIES</option>
             <option value="IN">🇮🇳 INDIA</option>
             <option value="US">🇺🇸 UNITED STATES</option>
@@ -446,30 +450,30 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
       </div>
 
       {/* Total Miners Count - Bottom Left */}
-      <div className="absolute bottom-4 left-4 z-10 bg-black bg-opacity-80 border border-white p-3 rounded pixelated">
+      <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-10 bg-black bg-opacity-80 border border-white p-2 md:p-3 rounded pixelated">
         <div className="flex items-end justify-start gap-2">
           <div className="text-left">
-            <div className="text-white text-5xl font-bold leading-none font-number" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
+            <div className="text-white text-2xl md:text-5xl font-bold leading-none font-number" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
               {totalCount.toLocaleString()}
             </div>
-            <div className="text-white text-xs mt-1.5 flex items-center gap-2">
-              <img src="/bitcoin_miner.png" alt="Miner" className="w-6 h-6" />
-              <span>TOTAL MINERS</span>
+            <div className="text-white text-xs mt-1 md:mt-1.5 flex items-center gap-1 md:gap-2">
+              <img src="/bitcoin_miner.png" alt="Miner" className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-[10px] md:text-xs">TOTAL MINERS</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Miners Count - Bottom Right */}
-      <div className="absolute bottom-4 right-4 z-10 bg-black bg-opacity-80 border border-white p-3 rounded pixelated">
+      <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-10 bg-black bg-opacity-80 border border-white p-2 md:p-3 rounded pixelated">
         <div className="flex items-end justify-end gap-2">
           <div className="text-right">
-            <div className="text-white text-5xl font-bold leading-none font-number" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
+            <div className="text-white text-2xl md:text-5xl font-bold leading-none font-number" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
               {filteredCount.toLocaleString()}
             </div>
-            <div className="text-white text-xs mt-1.5 flex items-center justify-end gap-2">
-              <img src="/bitcoin_miner.png" alt="Miner" className="w-6 h-6" />
-              <span>MINERS</span>
+            <div className="text-white text-xs mt-1 md:mt-1.5 flex items-center justify-end gap-1 md:gap-2">
+              <img src="/bitcoin_miner.png" alt="Miner" className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-[10px] md:text-xs">MINERS</span>
             </div>
           </div>
         </div>
