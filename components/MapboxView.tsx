@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import mapboxgl from 'mapbox-gl';
+import mapboxgl from "mapbox-gl";
 import { SimulationMode } from "../types";
 
 interface MapboxViewProps {
@@ -43,52 +43,50 @@ export default function MapboxView({ simulationMode, onStatsUpdate, showLabels }
         style: {
           version: 8,
           sources: {
-            'simple-tiles': {
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            "simple-tiles": {
+              type: "raster",
+              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
               tileSize: 256,
-              attribution: '© OpenStreetMap contributors'
-            }
+              attribution: "© OpenStreetMap contributors",
+            },
           },
           layers: [
             {
-              id: 'background',
-              type: 'background',
-              paint: { 'background-color': '#000000' }
+              id: "background",
+              type: "background",
+              paint: { "background-color": "#000000" },
             },
             {
-              id: 'simple-tiles',
-              type: 'raster',
-              source: 'simple-tiles',
+              id: "simple-tiles",
+              type: "raster",
+              source: "simple-tiles",
               paint: {
-                'raster-opacity': 0.3,
-                'raster-brightness-min': 0.2,
-                'raster-brightness-max': 0.6,
-                'raster-saturation': -1.0,
-                'raster-contrast': 0.8
-              }
-            }
-          ]
+                "raster-opacity": 0.3,
+                "raster-brightness-min": 0.2,
+                "raster-brightness-max": 0.6,
+                "raster-saturation": -1.0,
+                "raster-contrast": 0.8,
+              },
+            },
+          ],
         },
         center: [0, 20],
         zoom: 2,
         attributionControl: false,
-        logoControl: false,
         doubleClickZoom: true,
         scrollZoom: true,
         boxZoom: true,
         dragRotate: false,
         dragPan: true,
         keyboard: true,
-        touchZoomRotate: true
+        touchZoomRotate: true,
       });
 
-      map.current.on('load', () => {
-        console.log('Mapbox map loaded');
+      map.current.on("load", () => {
+        console.log("Mapbox map loaded");
       });
-
     } catch (err) {
-      console.error('Map creation failed:', err);
+      console.error("Map creation failed:", err);
       setError(`Failed to create map: ${err instanceof Error ? err.message : String(err)}`);
     }
 
@@ -105,51 +103,45 @@ export default function MapboxView({ simulationMode, onStatsUpdate, showLabels }
     if (!map.current || !bitNodesData) return;
 
     const nodes = Object.entries(bitNodesData.nodes);
-    const validNodes = nodes
-      .filter(([_, data]: [string, any]) => 
-        data[8] != null && data[9] != null && 
-        data[8] !== 0 && data[9] !== 0
-      )
-      .slice(0, 200);
+    const validNodes = nodes.filter(([_, data]: [string, any]) => data[8] != null && data[9] != null && data[8] !== 0 && data[9] !== 0).slice(0, 200);
 
     // Clean up existing nodes
     try {
-      if (map.current.getSource('nodes')) {
-        map.current.removeLayer('nodes');
-        map.current.removeSource('nodes');
+      if (map.current.getSource("nodes")) {
+        map.current.removeLayer("nodes");
+        map.current.removeSource("nodes");
       }
     } catch (e) {}
 
     // Add nodes source
-    map.current.addSource('nodes', {
-      type: 'geojson',
+    map.current.addSource("nodes", {
+      type: "geojson",
       data: {
-        type: 'FeatureCollection',
+        type: "FeatureCollection",
         features: validNodes.map(([ip, data]: [string, any]) => ({
-          type: 'Feature',
+          type: "Feature",
           properties: { ip },
           geometry: {
-            type: 'Point',
-            coordinates: [data[9], data[8]] // [lon, lat]
-          }
-        }))
-      }
+            type: "Point",
+            coordinates: [data[9], data[8]], // [lon, lat]
+          },
+        })),
+      },
     });
 
     // Add nodes layer
     map.current.addLayer({
-      id: 'nodes',
-      type: 'circle',
-      source: 'nodes',
+      id: "nodes",
+      type: "circle",
+      source: "nodes",
       paint: {
-        'circle-radius': 4,
-        'circle-color': '#00ccf3',
-        'circle-stroke-width': 1,
-        'circle-stroke-color': '#ffffff',
-        'circle-opacity': 0.9
-      }
+        "circle-radius": 4,
+        "circle-color": "#00ccf3",
+        "circle-stroke-width": 1,
+        "circle-stroke-color": "#ffffff",
+        "circle-opacity": 0.9,
+      },
     });
-
   }, [bitNodesData]);
 
   if (error) {
@@ -162,11 +154,7 @@ export default function MapboxView({ simulationMode, onStatsUpdate, showLabels }
 
   return (
     <div className="w-full h-full relative">
-      <div
-        ref={mapContainer}
-        className="w-full h-full"
-        style={{ backgroundColor: "#000000" }}
-      />
+      <div ref={mapContainer} className="w-full h-full" style={{ backgroundColor: "#000000" }} />
     </div>
   );
 }

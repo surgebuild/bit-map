@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
-import { BitNodesData, SimulationMode } from "../types";
+import { SimulationMode } from "../types";
 
 interface MapViewProps {
   simulationMode: SimulationMode;
@@ -10,33 +10,185 @@ interface MapViewProps {
   showLabels?: boolean;
 }
 
+interface MinerDialogProps {
+  minerData: any;
+  ip: string;
+  onClose: () => void;
+}
+
+// Country center coordinates and zoom levels
+const countryCoordinates: Record<string, { center: [number, number]; zoom: number }> = {
+  IN: { center: [78.9629, 20.5937], zoom: 5 }, // India
+  US: { center: [-95.7129, 37.0902], zoom: 4 }, // United States
+  CN: { center: [104.1954, 35.8617], zoom: 4 }, // China
+  DE: { center: [10.4515, 51.1657], zoom: 6 }, // Germany
+  GB: { center: [-3.436, 55.3781], zoom: 6 }, // United Kingdom
+  FR: { center: [2.2137, 46.2276], zoom: 6 }, // France
+  CA: { center: [-106.3468, 56.1304], zoom: 4 }, // Canada
+  AU: { center: [133.7751, -25.2744], zoom: 4 }, // Australia
+  NL: { center: [5.2913, 52.1326], zoom: 7 }, // Netherlands
+  JP: { center: [138.2529, 36.2048], zoom: 6 }, // Japan
+};
+
+// Country flag emojis
+const countryFlags: Record<string, string> = {
+  IN: "🇮🇳",
+  US: "🇺🇸",
+  CN: "🇨🇳",
+  DE: "🇩🇪",
+  GB: "🇬🇧",
+  FR: "🇫🇷",
+  CA: "🇨🇦",
+  AU: "🇦🇺",
+  NL: "🇳🇱",
+  JP: "🇯🇵",
+};
+
+// Miner Dialog Component
+function MinerDialog({ minerData, ip, onClose }: MinerDialogProps) {
+  const data = minerData as any[];
+
+  // Parse miner data - indices: 0=protocol, 1=version, 2=timestamp, 3=services, 4=height,
+  // 5=hostname, 6=city, 7=country, 8=lat, 9=lon, 10=timezone, 11=ASN, 12=ISP
+  const protocol = data[0] || "Unknown";
+  const version = data[1] || "Unknown";
+  const city = data[6] || "Unknown";
+  const country = data[7] || "Unknown";
+  const latitude = data[8] || 0;
+  const longitude = data[9] || 0;
+  const timezone = data[10] || "Unknown";
+  const asn = data[11] || "Unknown";
+  const isp = data[12] || "Unknown";
+  const blockHeight = data[4] || 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75" onClick={onClose}>
+      <div className="bg-black border-2 border-white p-6 rounded max-w-md w-full mx-4 pixelated" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center">
+            <img src="/main_logo.png" alt="Logo" className="w-12 h-12" />
+            <h2 className="text-2xl font-bold text-white">MINER INFO</h2>
+          </div>
+          <button onClick={onClose} className="text-white hover:text-gray-400 text-2xl">
+            ×
+          </button>
+        </div>
+
+        <div className="space-y-3 text-white">
+          <div>
+            <span className="text-[#f7931a] font-bold">IP Address:</span>
+            <div className="mt-1 break-words break-all">{ip}</div>
+          </div>
+
+          <div>
+            <span className="text-[#f7931a] font-bold">Location:</span>
+            <div className="mt-1">
+              {city}, {country}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-[#f7931a] font-bold">Coordinates:</span>
+            <div className="mt-1">
+              {latitude.toFixed(4)}, {longitude.toFixed(4)}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-[#f7931a] font-bold">Bitcoin Version:</span>
+            <div className="mt-1">{version}</div>
+          </div>
+
+          <div>
+            <span className="text-[#f7931a] font-bold">Protocol:</span>
+            <div className="mt-1">{protocol}</div>
+          </div>
+
+          <div>
+            <span className="text-[#f7931a] font-bold">ISP:</span>
+            <div className="mt-1">{isp}</div>
+          </div>
+
+          <div>
+            <span className="text-[#f7931a] font-bold">Timezone:</span>
+            <div className="mt-1">{timezone}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MapView({ simulationMode, onStatsUpdate, showLabels = true }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const [bitNodesData, setBitNodesData] = useState<BitNodesData | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const [bitNodesData, setBitNodesData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [filteredCount, setFilteredCount] = useState<number>(0);
+  const [selectedMiner, setSelectedMiner] = useState<{ ip: string; data: any } | null>(null);
+
+  // Detect user location via IPInfo
+  useEffect(() => {
+    const detectLocation = async () => {
+      try {
+        const apiKey = process.env.NEXT_PUBLIC_IPINFO_API_KEY;
+        const response = await fetch(`https://ipinfo.io/json?token=${apiKey}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Detected location:", data);
+          const country = data.country || "US"; // Default to US if not found
+          setSelectedCountry(country);
+        } else {
+          // Default to US if API fails
+          setSelectedCountry("US");
+        }
+      } catch (err) {
+        console.error("Failed to detect location:", err);
+        // Default to US if detection fails
+        setSelectedCountry("US");
+      }
+    };
+    detectLocation();
+  }, []);
+
+  // Zoom to country when selected
+  useEffect(() => {
+    if (!map.current || !selectedCountry) return;
+
+    const countryInfo = countryCoordinates[selectedCountry];
+    if (countryInfo) {
+      map.current.flyTo({
+        center: countryInfo.center,
+        zoom: countryInfo.zoom,
+        duration: 1500,
+      });
+    }
+  }, [selectedCountry]);
+
   // Load data
   useEffect(() => {
     console.log("Starting data load...");
-    
-    fetch("/bitnodes.json")
-      .then(res => {
+
+    fetch("/bitnoderest.json")
+      .then((res) => {
         console.log("Fetch response:", res.status, res.ok);
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         }
         return res.json();
       })
-      .then((data: BitNodesData) => {
-        console.log("Data loaded successfully:", data.total_nodes, "nodes");
+      .then((data: any) => {
+        console.log("Data loaded successfully:", Object.keys(data).length, "nodes");
         setBitNodesData(data);
         onStatsUpdate({
-          totalNodes: data.total_nodes,
-          consensusHeight: Math.max(...Object.values(data.nodes).map(n => n[4])),
-          timestamp: data.timestamp,
+          totalNodes: Object.keys(data).length,
+          consensusHeight: Math.max(...Object.values(data).map((n: any) => n[4])),
+          timestamp: Date.now(),
         });
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Data load failed:", err);
         setError(`Failed to load data: ${err.message || err.toString()}`);
       });
@@ -47,52 +199,40 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
     if (!mapContainer.current || map.current) return;
 
     console.log("Initializing map...");
-    
+
     // Calculate responsive zoom level based on screen size
     const getResponsiveZoom = () => {
       try {
         const width = window.innerWidth;
         const height = window.innerHeight;
         const minDimension = Math.min(width, height);
-        
-        if (minDimension < 600) return 1;      // Mobile
-        if (minDimension < 1024) return 1.5;   // Tablet
-        if (minDimension < 1440) return 2;     // Desktop
-        return 2.5;                            // Large screens
+
+        if (minDimension < 600) return 1; // Mobile
+        if (minDimension < 1024) return 1.5; // Tablet
+        if (minDimension < 1440) return 2; // Desktop
+        return 2.5; // Large screens
       } catch (error) {
         console.error("Error calculating responsive zoom:", error);
         return 2; // Default fallback
       }
     };
-    
-    // Handle window resize with debouncing
-    let resizeTimeout: NodeJS.Timeout;
+
+    // Handle window resize (only resize, don't change zoom)
     const handleResize = () => {
       if (map.current) {
         map.current.resize();
-        
-        // Debounce zoom adjustment
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-          if (map.current) {
-            const newZoom = getResponsiveZoom();
-            map.current.easeTo({ zoom: newZoom, duration: 500 });
-          }
-        }, 300);
       }
     };
-    
+
     try {
       map.current = new maplibregl.Map({
         container: mapContainer.current,
         style: {
           version: 8,
           sources: {
-            "world": {
+            world: {
               type: "raster",
-              tiles: [
-                "https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
-              ],
+              tiles: ["https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"],
               tileSize: 256,
               attribution: "",
               minzoom: 0,
@@ -152,16 +292,14 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
         setError("Map failed to load");
       });
 
-      window.addEventListener('resize', handleResize);
-
+      window.addEventListener("resize", handleResize);
     } catch (err) {
       console.error("Map creation failed:", err);
       setError(`Failed to create map: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(resizeTimeout);
+      window.removeEventListener("resize", handleResize);
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -169,92 +307,75 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
     };
   }, []);
 
-  // Add nodes
+  // Add nodes with country filtering
   useEffect(() => {
     if (!map.current || !bitNodesData) return;
 
     console.log("Adding nodes...");
+    console.log("Filtering by country:", selectedCountry);
 
-    // Clean up
-    try {
-      if (map.current.getSource("nodes")) {
-        map.current.removeLayer("nodes");
-        map.current.removeSource("nodes");
-      }
-    } catch (e) {}
+    // Clean up existing markers
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
 
     // Get valid nodes
-    const nodes = Object.entries(bitNodesData.nodes);
-    const validNodes = nodes
-      .filter(([_, data]) => 
-        data[8] != null && data[9] != null && 
-        data[8] !== 0 && data[9] !== 0
-      )
-      .slice(0, 200);
+    const nodes = Object.entries(bitNodesData);
+    let validNodes = nodes.filter(([_, data]: [string, any]) => data[8] != null && data[9] != null && data[8] !== 0 && data[9] !== 0);
 
-    console.log(`Adding ${validNodes.length} nodes`);
+    // Filter by country if a country is selected
+    if (selectedCountry) {
+      validNodes = validNodes.filter(([_, data]: [string, any]) => data[7] === selectedCountry);
+    }
+
+    setFilteredCount(validNodes.length);
+    console.log(`Adding ${validNodes.length} nodes for country: ${selectedCountry || "ALL"}`);
 
     if (validNodes.length > 0) {
-      map.current.addSource("nodes", {
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: validNodes.map(([ip, data]) => ({
-            type: "Feature",
-            properties: { ip, city: data[6], country: data[7] },
-            geometry: {
-              type: "Point",
-              coordinates: [data[9], data[8]],
-            },
-          })),
-        },
-      });
+      // Add markers with animated GIF
+      validNodes.forEach(([ip, data]: [string, any]) => {
+        // Create a custom HTML element for the marker
+        const el = document.createElement("div");
+        el.className = "bitcoin-node-marker";
+        el.style.width = "30px";
+        el.style.height = "30px";
+        el.style.backgroundImage = "url(/sato.gif)";
+        el.style.backgroundSize = "contain";
+        el.style.backgroundRepeat = "no-repeat";
+        el.style.backgroundPosition = "center";
+        el.style.cursor = "pointer";
+        el.style.transition = "opacity 0.2s, filter 0.2s";
+        el.style.willChange = "opacity, filter";
 
-      // Load Bitcoin icon first
-      if (!map.current.hasImage('bitcoin-icon')) {
-        const img = new Image(20, 20);
-        img.onload = () => {
-          if (map.current) {
-            map.current.addImage('bitcoin-icon', img);
-            
-            // Add symbol layer with Bitcoin icon
-            map.current.addLayer({
-              id: "nodes",
-              type: "symbol",
-              source: "nodes",
-              layout: {
-                "icon-image": "bitcoin-icon",
-                "icon-size": 0.8,
-                "icon-allow-overlap": true,
-                "icon-ignore-placement": true,
-              },
-            });
-          }
-        };
-        img.src = 'data:image/svg+xml;base64,' + btoa(`
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="12" fill="#f7931a"/>
-            <path d="M17.154 11.154c0.164-1.1-0.675-1.692-1.823-2.088l0.372-1.492-0.908-0.226-0.363 1.452c-0.238-0.059-0.483-0.115-0.728-0.171l0.366-1.463-0.908-0.226-0.372 1.49c-0.197-0.045-0.39-0.089-0.577-0.135l0.001-0.006-1.253-0.313-0.242 0.97s0.675 0.154 0.661 0.164c0.368 0.092 0.435 0.335 0.424 0.528l-0.424 1.702c0.025 0.006 0.058 0.015 0.094 0.029l-0.096-0.024-0.595 2.388c-0.045 0.112-0.159 0.28-0.416 0.216 0.009 0.013-0.661-0.165-0.661-0.165l-0.453 1.040 1.182 0.295c0.22 0.055 0.435 0.112 0.647 0.167l-0.376 1.508 0.907 0.226 0.372-1.492c0.247 0.067 0.487 0.129 0.722 0.188l-0.371 1.483 0.908 0.226 0.376-1.505c1.55 0.293 2.716 0.175 3.206-1.226 0.395-1.129-0.020-1.781-0.834-2.202 0.593-0.137 1.040-0.528 1.160-1.335zm-2.076 2.911c-0.281 1.128-2.181 0.518-2.796 0.365l0.499-2.002c0.615 0.154 2.589 0.458 2.297 1.637zm0.281-2.926c-0.256 1.026-1.84 0.505-2.351 0.377l0.452-1.813c0.511 0.127 2.164 0.365 1.899 1.436z" fill="white"/>
-          </svg>
-        `);
-      } else {
-        // Icon already loaded, just add the layer
-        map.current.addLayer({
-          id: "nodes",
-          type: "symbol",
-          source: "nodes",
-          layout: {
-            "icon-image": "bitcoin-icon",
-            "icon-size": 0.8,
-            "icon-allow-overlap": true,
-            "icon-ignore-placement": true,
-          },
+        // Add hover effect (using opacity and filter instead of transform to avoid repositioning)
+        el.addEventListener("mouseenter", () => {
+          el.style.opacity = "0.9";
+          el.style.filter = "brightness(1.3) drop-shadow(0 0 8px rgba(247, 147, 26, 0.8))";
         });
-      }
+        el.addEventListener("mouseleave", () => {
+          el.style.opacity = "1";
+          el.style.filter = "none";
+        });
+
+        // Add click handler
+        el.addEventListener("click", () => {
+          setSelectedMiner({ ip, data });
+        });
+
+        // Create marker
+        const marker = new maplibregl.Marker({
+          element: el,
+          anchor: "center",
+        })
+          .setLngLat([data[9], data[8]])
+          .addTo(map.current!);
+
+        // Store marker reference for cleanup
+        markersRef.current.push(marker);
+      });
 
       console.log("Nodes added successfully");
     }
-  }, [bitNodesData]);
+  }, [bitNodesData, selectedCountry]);
 
   if (error) {
     return (
@@ -265,10 +386,57 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
   }
 
   return (
-    <div
-      ref={mapContainer}
-      className="w-full h-full"
-      style={{ backgroundColor: "#0a0a0a" }}
-    />
+    <div className="w-full h-full relative" style={{ backgroundColor: "#0a0a0a" }}>
+      <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Title - Top Left */}
+      <div className="absolute top-4 left-4 z-10 pixelated flex items-center">
+        <img src="/main_logo.png" alt="Sato Finder" className="w-16 h-16 md:w-20 md:h-20" />
+        <div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-1" style={{ color: "#f7931a" }}>
+            SATO FINDER
+          </h1>
+          <p className="text-white text-sm md:text-base">Find your friendly neighborhood satoshi</p>
+        </div>
+      </div>
+
+      {/* Country Selector - Top Right */}
+      <div className="absolute top-4 right-4 z-10 bg-black bg-opacity-80 border-2 border-white p-3 rounded pixelated">
+        <label className="text-white text-sm font-bold mb-2 block">COUNTRY</label>
+        <div className="flex items-center gap-2">
+          <select value={selectedCountry} onChange={(e) => setSelectedCountry(e.target.value)} className="bg-black text-white border-2 border-white px-3 py-2 rounded cursor-pointer pixelated flex-1">
+            <option value="">ALL COUNTRIES</option>
+            <option value="IN">🇮🇳 INDIA</option>
+            <option value="US">🇺🇸 UNITED STATES</option>
+            <option value="CN">🇨🇳 CHINA</option>
+            <option value="DE">🇩🇪 GERMANY</option>
+            <option value="GB">🇬🇧 UNITED KINGDOM</option>
+            <option value="FR">🇫🇷 FRANCE</option>
+            <option value="CA">🇨🇦 CANADA</option>
+            <option value="AU">🇦🇺 AUSTRALIA</option>
+            <option value="NL">🇳🇱 NETHERLANDS</option>
+            <option value="JP">🇯🇵 JAPAN</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Miners Count - Bottom Right */}
+      <div className="absolute bottom-4 right-4 z-10 bg-black bg-opacity-80 border-2 border-white p-4 rounded pixelated">
+        <div className="flex items-end justify-end gap-3">
+          <div className="text-right">
+            <div className="text-white text-6xl font-bold leading-none" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
+              {filteredCount.toLocaleString()}
+            </div>
+            <div className="text-white text-sm mt-2 flex items-center justify-end gap-2">
+              <img src="/bitcoin_miner.png" alt="Miner" className="w-8 h-8" />
+              <span>MINERS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Miner Dialog */}
+      {selectedMiner && <MinerDialog minerData={selectedMiner.data} ip={selectedMiner.ip} onClose={() => setSelectedMiner(null)} />}
+    </div>
   );
 }

@@ -166,3 +166,28 @@ div[style*="pointer-events: none"] *,
   font-size: 0 !important;
   color: transparent !important;
 }
+
+/* Departure Mono font - Use local font files if available in public/fonts/ */
+@font-face {
+  font-family: 'DepartureMono';
+  src: url('/fonts/DepartureMono-Regular.woff2') format('woff2'),
+       url('/fonts/DepartureMono-Regular.woff') format('woff'),
+       url('/fonts/DepartureMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Pixelated font styling */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  font-family: 'DepartureMono', 'Courier New', Courier, monospace;
+  letter-spacing: 0.05em;
+}
+
+/* Apply Departure Mono globally with fallback */
+* {
+  font-family: 'DepartureMono', 'Courier New', Courier, monospace;
+}

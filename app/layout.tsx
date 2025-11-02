@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Bitcoin Node Map Visualization",
-  description: "Interactive map showing Bitcoin node distribution and decentralization simulation",
+  title: "Sato Finder - Find Your Friendly Neighborhood Satoshi",
+  description: "Discover Bitcoin miners in your neighborhood. Explore the global network of Bitcoin nodes and connect with nearby miners.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
