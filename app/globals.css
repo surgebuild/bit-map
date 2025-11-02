@@ -191,3 +191,8 @@ div[style*="pointer-events: none"] *,
 * {
   font-family: 'DepartureMono', 'Courier New', Courier, monospace;
 }
+
+/* Courier New font for all numbers */
+.font-number {
+  font-family: 'Courier New', Courier, monospace !important;
+}

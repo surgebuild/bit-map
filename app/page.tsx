@@ -4,14 +4,9 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { SimulationMode } from "../types";
 
-// Dynamic imports with no SSR and loading states
+// Dynamic imports with no SSR
 const MapView = dynamic(() => import("../components/MapView"), { 
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-      <div className="text-gray-400">Loading map...</div>
-    </div>
-  ),
 });
 
 
@@ -38,9 +33,14 @@ export default function Page() {
   // Show loading state on server/before mount
   if (!mounted) {
     return (
-      <main className="relative w-screen h-screen bg-gray-900 overflow-hidden">
+      <main className="relative w-screen h-screen overflow-hidden" style={{ backgroundColor: "#0a0a0a" }}>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-400 text-xl">Loading Bitcoin Node Map...</div>
+          <div className="flex flex-col items-center justify-center gap-6 pixelated">
+            <img src="/sato.gif" alt="Loading" className="w-32 h-32 md:w-40 md:h-40" />
+            <p className="text-white text-xl md:text-2xl font-bold text-center">
+              Finding your friendly neighborhood Satoshi
+            </p>
+          </div>
         </div>
       </main>
     );

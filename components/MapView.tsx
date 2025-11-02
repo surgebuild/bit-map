@@ -90,7 +90,7 @@ function MinerDialog({ minerData, ip, onClose }: MinerDialogProps) {
           <div>
             <span className="text-[#f7931a] font-bold">Coordinates:</span>
             <div className="mt-1">
-              {latitude.toFixed(4)}, {longitude.toFixed(4)}
+              <span className="font-number">{latitude.toFixed(4)}, {longitude.toFixed(4)}</span>
             </div>
           </div>
 
@@ -127,7 +127,9 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
   const [error, setError] = useState<string | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string>("");
   const [filteredCount, setFilteredCount] = useState<number>(0);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [selectedMiner, setSelectedMiner] = useState<{ ip: string; data: any } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Detect user location via IPInfo
   useEffect(() => {
@@ -167,36 +169,45 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
     }
   }, [selectedCountry]);
 
-  // Load data
+  // Load data with delay
   useEffect(() => {
     console.log("Starting data load...");
-
-    fetch("/bitnoderest.json")
-      .then((res) => {
-        console.log("Fetch response:", res.status, res.ok);
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        return res.json();
-      })
-      .then((data: any) => {
-        console.log("Data loaded successfully:", Object.keys(data).length, "nodes");
-        setBitNodesData(data);
-        onStatsUpdate({
-          totalNodes: Object.keys(data).length,
-          consensusHeight: Math.max(...Object.values(data).map((n: any) => n[4])),
-          timestamp: Date.now(),
+    
+    // Add delay before starting to load
+    const loadingDelay = setTimeout(() => {
+      fetch("/bitnoderest.json")
+        .then((res) => {
+          console.log("Fetch response:", res.status, res.ok);
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        })
+        .then((data: any) => {
+          console.log("Data loaded successfully:", Object.keys(data).length, "nodes");
+          const totalNodes = Object.keys(data).length;
+          setBitNodesData(data);
+          setTotalCount(totalNodes);
+          setIsLoading(false);
+          onStatsUpdate({
+            totalNodes: totalNodes,
+            consensusHeight: Math.max(...Object.values(data).map((n: any) => n[4])),
+            timestamp: Date.now(),
+          });
+        })
+        .catch((err) => {
+          console.error("Data load failed:", err);
+          setError(`Failed to load data: ${err.message || err.toString()}`);
+          setIsLoading(false);
         });
-      })
-      .catch((err) => {
-        console.error("Data load failed:", err);
-        setError(`Failed to load data: ${err.message || err.toString()}`);
-      });
+    }, 2000); // 2 second delay
+
+    return () => clearTimeout(loadingDelay);
   }, []);
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (isLoading || !mapContainer.current || map.current) return;
 
     console.log("Initializing map...");
 
@@ -305,7 +316,7 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
         map.current = null;
       }
     };
-  }, []);
+  }, [isLoading]);
 
   // Add nodes with country filtering
   useEffect(() => {
@@ -385,6 +396,20 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
     );
   }
 
+  // Loading screen
+  if (isLoading) {
+    return (
+      <div className="w-full h-full relative flex items-center justify-center" style={{ backgroundColor: "#0a0a0a" }}>
+        <div className="flex flex-col items-center justify-center gap-6 pixelated">
+          <img src="/sato.gif" alt="Loading" className="w-32 h-32 md:w-40 md:h-40" />
+          <p className="text-white text-xl md:text-2xl font-bold text-center">
+            Finding your friendly neighborhood Satoshi
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full relative" style={{ backgroundColor: "#0a0a0a" }}>
       <div ref={mapContainer} className="w-full h-full" />
@@ -420,15 +445,30 @@ export default function MapView({ simulationMode, onStatsUpdate, showLabels = tr
         </div>
       </div>
 
+      {/* Total Miners Count - Bottom Left */}
+      <div className="absolute bottom-4 left-4 z-10 bg-black bg-opacity-80 border border-white p-3 rounded pixelated">
+        <div className="flex items-end justify-start gap-2">
+          <div className="text-left">
+            <div className="text-white text-5xl font-bold leading-none font-number" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
+              {totalCount.toLocaleString()}
+            </div>
+            <div className="text-white text-xs mt-1.5 flex items-center gap-2">
+              <img src="/bitcoin_miner.png" alt="Miner" className="w-6 h-6" />
+              <span>TOTAL MINERS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Miners Count - Bottom Right */}
-      <div className="absolute bottom-4 right-4 z-10 bg-black bg-opacity-80 border-2 border-white p-4 rounded pixelated">
-        <div className="flex items-end justify-end gap-3">
+      <div className="absolute bottom-4 right-4 z-10 bg-black bg-opacity-80 border border-white p-3 rounded pixelated">
+        <div className="flex items-end justify-end gap-2">
           <div className="text-right">
-            <div className="text-white text-6xl font-bold leading-none" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
+            <div className="text-white text-5xl font-bold leading-none font-number" style={{ textShadow: "2px 2px 0px #0a0a0a" }}>
               {filteredCount.toLocaleString()}
             </div>
-            <div className="text-white text-sm mt-2 flex items-center justify-end gap-2">
-              <img src="/bitcoin_miner.png" alt="Miner" className="w-8 h-8" />
+            <div className="text-white text-xs mt-1.5 flex items-center justify-end gap-2">
+              <img src="/bitcoin_miner.png" alt="Miner" className="w-6 h-6" />
               <span>MINERS</span>
             </div>
           </div>
